@@ -764,6 +764,26 @@ async function fbUpdate(path, data) {
   return r.json();
 }
 
+/* ── ROLE CHECKS ── */
+let _isAdmin = false;
+
+async function checkAdminStatus() {
+  if (!_uid) return false;
+  try {
+    const admins = await fbGet("/admins");
+    _isAdmin = admins && admins[_uid] === true;
+    return _isAdmin;
+  } catch (e) {
+    console.error("Error checking admin status:", e);
+    return false;
+  }
+}
+
+async function isAdmin() {
+  if (_isAdmin !== null) return _isAdmin;
+  return await checkAdminStatus();
+}
+
 /* ── LOGIN ── */
 async function doLogin() {
   const email = document.getElementById("loginEmail").value.trim();
@@ -776,6 +796,7 @@ async function doLogin() {
     await signIn(email, pass);
     CFG.authEmail = email;
     document.getElementById("loginWrap").style.display = "none";
+    await checkAdminStatus(); // Check admin status after login
     initApp();
   } catch(e) {
     err.textContent = e.message.includes("INVALID_LOGIN_CREDENTIALS") ? "Incorrect email or password" : e.message;
@@ -940,6 +961,11 @@ function renderChemInventory() {
 }
 
 async function adjustChemStock(key) {
+  const adminCheck = await isAdmin();
+  if (!adminCheck) {
+    toast("Only admins can adjust stock. Contact an administrator.", "red");
+    return;
+  }
   const current = _stockBalances.CHEM[key] || 0;
   const input = prompt(`Set actual stock for ${CHEM_LABELS[key]} (litres). Current: ${current}`, current);
   if (input === null) return;
@@ -947,9 +973,13 @@ async function adjustChemStock(key) {
   if (isNaN(newQty) || newQty < 0) { toast("Enter a valid number", "red"); return; }
   const diff = newQty - current;
   if (diff === 0) return;
-  await recordStockMovement("CHEM", key, Math.abs(diff), diff > 0 ? "IN" : "OUT", "ADJUSTMENT", "Stocktake adjustment");
-  toast(`${CHEM_LABELS[key]} adjusted to ${newQty.toLocaleString()} L`, "green");
-  loadStockLedger();
+  try {
+    await recordStockMovement("CHEM", key, Math.abs(diff), diff > 0 ? "IN" : "OUT", "ADJUSTMENT", "Stocktake adjustment");
+    toast(`${CHEM_LABELS[key]} adjusted to ${newQty.toLocaleString()} L`, "green");
+    loadStockLedger();
+  } catch (e) {
+    toast("Failed to adjust stock: " + e.message, "red");
+  }
 }
 
 /* ── DASHBOARD GLANCE ── */
@@ -1261,7 +1291,10 @@ async function saveShift() {
     const data = { ...existing, ...newData, updatedAt: Date.now() };
     try {
       await fbUpdate(`/maize_shifts/${_editingShiftId}`, data);
-    } catch(e) {}
+    } catch(e) {
+      toast("Failed to update shift: " + e.message, "red");
+      return;
+    }
     const idx = _shifts.findIndex(s => s.id === _editingShiftId);
     if (idx >= 0) _shifts[idx] = { id: _editingShiftId, ...data };
     localStorage.setItem("maize_shifts", JSON.stringify(_shifts));
@@ -1302,6 +1335,7 @@ async function saveShift() {
     loadDashboard();
     toast("Shift saved — stock updated", "green");
   } catch(e) {
+    console.error("Error saving shift:", e);
     const localId = `local_${Date.now()}`;
     _shifts.unshift({ id: localId, ...data });
     localStorage.setItem("maize_shifts", JSON.stringify(_shifts));
@@ -1318,10 +1352,18 @@ function editShift(id) {
   openShiftModal(id);
 }
 async function deleteShift(id) {
+  const adminCheck = await isAdmin();
+  if (!adminCheck) {
+    toast("Only admins can delete shifts. Contact an administrator.", "red");
+    return;
+  }
   if (!confirm("Delete this shift permanently? This cannot be undone.")) return;
   try {
     await fbUpdate(`/maize_shifts/${id}`, null);
-  } catch(e) {}
+  } catch(e) {
+    toast("Failed to delete shift: " + e.message, "red");
+    return;
+  }
   _shifts = _shifts.filter(s => s.id !== id);
   localStorage.setItem("maize_shifts", JSON.stringify(_shifts));
   renderMaize();
@@ -1570,7 +1612,7 @@ window.addEventListener("DOMContentLoaded", () => {
   loadTheme();
   if (_token && Date.now() < _tokenExpiry - 300000) {
     document.getElementById("loginWrap").style.display = "none";
-    initApp();
+    checkAdminStatus().then(() => initApp());
   } else {
     document.getElementById("loginWrap").style.display = "flex";
     document.getElementById("loginEmail").focus();
