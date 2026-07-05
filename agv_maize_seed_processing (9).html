@@ -676,6 +676,11 @@ select { cursor:pointer; }
 <div class="toast" id="toast"><span id="toastMsg">Ready</span></div>
 
 <script>
+/* ── GLOBALS ── */
+let _token = null, _tokenExpiry = 0, _uid = null, _userEmail = null;
+let _editingShiftId = null;
+let _isAdmin = null;
+
 /* ── CONFIG ── */
 let CFG = {
   databaseUrl: "https://kimaru-98dfc-default-rtdb.firebaseio.com",
@@ -702,10 +707,6 @@ function saveSettings() {
   toast("Configuration saved", "green");
   setTimeout(() => document.getElementById("settingsStatus").textContent = "", 2000);
 }
-
-/* ── AUTH ── */
-let _token = null, _tokenExpiry = 0, _uid = null, _userEmail = null;
-let _editingShiftId = null;
 
 /* ── DARK MODE ── */
 function toggleDarkMode() {
@@ -765,17 +766,18 @@ async function fbUpdate(path, data) {
 }
 
 /* ── ROLE CHECKS ── */
-let _isAdmin = false;
-
 async function checkAdminStatus() {
-  if (!_uid) return false;
+  if (!_uid || !_token) return false;
   try {
     const admins = await fbGet("/admins");
     _isAdmin = admins && admins[_uid] === true;
     return _isAdmin;
   } catch (e) {
     console.error("Error checking admin status:", e);
-    return false;
+    // Fallback: Check localStorage for cached admin status
+    const cachedAdmin = localStorage.getItem(`agv_admin_${_uid}`);
+    _isAdmin = cachedAdmin === "true";
+    return _isAdmin;
   }
 }
 
@@ -796,10 +798,12 @@ async function doLogin() {
     await signIn(email, pass);
     CFG.authEmail = email;
     document.getElementById("loginWrap").style.display = "none";
-    await checkAdminStatus(); // Check admin status after login
+    // Wait for token to be set before checking admin status
+    await checkAdminStatus();
     initApp();
   } catch(e) {
-    err.textContent = e.message.includes("INVALID_LOGIN_CREDENTIALS") ? "Incorrect email or password" : e.message;
+    console.error("Login error:", e);
+    err.textContent = e.message.includes("INVALID_LOGIN_CREDENTIALS") ? "Incorrect email or password" : (e.message || "Login failed. Try again.");
   }
 }
 function doLogout() {
