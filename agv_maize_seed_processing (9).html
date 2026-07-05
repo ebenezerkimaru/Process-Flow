@@ -732,13 +732,33 @@ function loadTheme() {
 }
 
 async function signIn(email, password) {
+  console.log("Attempting to sign in with email:", email);
   const url = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${CFG.apiKey}`;
-  const r = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({email, password, returnSecureToken:true}) });
-  const d = await r.json();
-  if (!d.idToken) throw new Error(d.error?.message || "Authentication failed");
-  _token = d.idToken; _tokenExpiry = Date.now() + parseInt(d.expiresIn)*1000;
-  _uid = d.localId; _userEmail = email;
-  return d;
+  console.log("Firebase Auth URL:", url);
+  try {
+    const r = await fetch(url, { 
+      method: "POST", 
+      headers: {"Content-Type": "application/json"}, 
+      body: JSON.stringify({email, password, returnSecureToken: true}) 
+    });
+    console.log("Firebase response status:", r.status);
+    const d = await r.json();
+    console.log("Firebase response data:", d);
+    if (!d.idToken) {
+      const errorMsg = d.error?.message || "Authentication failed";
+      console.error("Firebase error:", errorMsg);
+      throw new Error(errorMsg);
+    }
+    _token = d.idToken; 
+    _tokenExpiry = Date.now() + parseInt(d.expiresIn)*1000;
+    _uid = d.localId; 
+    _userEmail = email;
+    console.log("Login successful! Token set.");
+    return d;
+  } catch (e) {
+    console.error("SignIn error:", e);
+    throw e;
+  }
 }
 async function getToken() {
   if (_token && Date.now() < _tokenExpiry - 300000) return _token;
@@ -788,19 +808,30 @@ async function isAdmin() {
 
 /* ── LOGIN ── */
 async function doLogin() {
+  console.log("doLogin() called");
   const email = document.getElementById("loginEmail").value.trim();
   const pass = document.getElementById("loginPassword").value;
   const err = document.getElementById("loginErr");
+  console.log("Email:", email, "Password:", pass ? "*****" : "(empty)");
   err.textContent = "";
-  if (!email || !pass) { err.textContent = "Enter your email and password"; return; }
+  if (!email || !pass) { 
+    console.log("Validation failed: Missing email or password");
+    err.textContent = "Enter your email and password"; 
+    return; 
+  }
   err.textContent = "Signing in…";
+  console.log("Calling signIn()...");
   try {
     await signIn(email, pass);
+    console.log("signIn() succeeded");
     CFG.authEmail = email;
     document.getElementById("loginWrap").style.display = "none";
+    console.log("Hiding login wrap");
     // Wait for token to be set before checking admin status
     await checkAdminStatus();
+    console.log("Admin status checked");
     initApp();
+    console.log("App initialized");
   } catch(e) {
     console.error("Login error:", e);
     err.textContent = e.message.includes("INVALID_LOGIN_CREDENTIALS") ? "Incorrect email or password" : (e.message || "Login failed. Try again.");
