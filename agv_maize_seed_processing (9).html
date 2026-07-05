@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AGV Maize Seed — Operations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --surface-2: #fafbfc;
+  --border: #e4e7ec;
+  --border-light: #f0f1f3;
+  --text: #1a1d23;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  --green: #16a34a;
+  --green-light: #dcfce7;
+  --green-text: #15803d;
+  --amber: #d97706;
+  --amber-light: #fef3c7;
+  --amber-text: #92400e;
+  --red: #dc2626;
+  --red-light: #fee2e2;
+  --red-text: #991b1b;
+  --blue: #2563eb;
+  --blue-light: #dbeafe;
+  --blue-text: #1e40af;
+  --purple: #7c3aed;
+  --purple-light: #ede9fe;
+  --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.04);
+  --shadow: 0 1px 3px 0 rgba(0,0,0,0.06), 0 1px 2px -1px rgba(0,0,0,0.04);
+  --shadow-lg: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.03);
+  --radius: 10px;
+  --radius-sm: 6px;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; font-family:var(--font); font-size:13px; color:var(--text); background:var(--bg); }
+
+.app { display:grid; grid-template-columns:56px 1fr; grid-template-rows:56px 1fr; height:100vh; }
+
+html[data-theme="dark"] {
+  --bg: #0f1115;
+  --surface: #1a1d23;
+  --surface-2: #14161b;
+  --border: #2a2d35;
+  --border-light: #23252c;
+  --text: #e8eaed;
+  --text-secondary: #9ca3af;
+  --text-tertiary: #6b7280;
+  --green-light: #14532d;
+  --green-text: #86efac;
+  --amber-light: #78350f;
+  --amber-text: #fcd34d;
+  --red-light: #7f1d1d;
+  --red-text: #fca5a5;
+  --blue-light: #1e3a8a;
+  --blue-text: #93c5fd;
+  --purple-light: #4c1d95;
+}
+html[data-theme="dark"] .toast { background: #111318; color: #e8eaed; border: 1px solid var(--border); }
+html[data-theme="dark"] .toast.green { background: #14532d; color: #86efac; border-color: #14532d; }
+html[data-theme="dark"] .toast.red { background: #7f1d1d; color: #fca5a5; border-color: #7f1d1d; }
+html[data-theme="dark"] .toast.amber { background: #78350f; color: #fcd34d; border-color: #78350f; }
+html[data-theme="dark"] .modal-overlay { background: rgba(0,0,0,0.65); }
+html[data-theme="dark"] .nav-item.active { color: var(--green-text); }
+
+/* ── Login Overlay ── */
+.login-overlay {
+  position: fixed; inset: 0; background: var(--bg); z-index: 9999;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.login-box {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 32px; width: 100%; max-width: 380px; box-shadow: var(--shadow-lg);
+}
+.login-logo { font-size: 20px; font-weight: 700; text-align: center; margin-bottom: 4px; }
+.login-logo span { color: var(--green); }
+.login-tagline { font-size: 12px; color: var(--text-secondary); text-align: center; margin-bottom: 24px; }
+.login-field { margin-bottom: 16px; }
+.login-field label { display: block; font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+.login-field input {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-family: var(--font); font-size: 13px; color: var(--text); background: var(--surface-2);
+  outline: none; transition: all .12s;
+}
+.login-field input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(22,163,74,0.08); background: var(--surface); }
+.login-err { color: var(--red); font-size: 12px; margin-top: 8px; text-align: center; min-height: 16px; }
+.login-btn { width: 100%; margin-top: 4px; justify-content: center; padding: 10px; font-size: 14px; }
+.login-footer { font-size: 11px; color: var(--text-tertiary); text-align: center; margin-top: 16px; }
+
+/* ── Topbar ── */
+.topbar {
+  grid-column:1 / -1;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; padding:0 20px; gap:16px;
+  position:relative; z-index:20;
+}
+.menu-btn {
+  width:32px; height:32px; border:none; background:none; border-radius:var(--radius-sm);
+  cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--text-secondary);
+}
+.menu-btn:hover { background:var(--bg); color:var(--text); }
+.brand { font-size:15px; font-weight:700; letter-spacing:-0.3px; color:var(--text); }
+.brand span { color:var(--green); }
+.breadcrumb { color:var(--text-tertiary); font-size:12px; margin-left:4px; }
+.breadcrumb a { color:var(--text-secondary); text-decoration:none; }
+.breadcrumb a:hover { color:var(--text); }
+.search-wrap {
+  margin-left:auto; position:relative; width:320px;
+}
+.search-wrap input {
+  width:100%; padding:7px 12px 7px 34px; border:1px solid var(--border); border-radius:var(--radius);
+  font-family:var(--font); font-size:12px; background:var(--surface-2); color:var(--text);
+  outline:none; transition:all .15s;
+}
+.search-wrap input:focus { border-color:var(--green); background:var(--surface); box-shadow:0 0 0 3px rgba(22,163,74,0.08); }
+.search-wrap::before {
+  content:"🔍"; position:absolute; left:10px; top:50%; transform:translateY(-50%);
+  font-size:12px; opacity:.5; pointer-events:none;
+}
+.topbar-actions { display:flex; align-items:center; gap:8px; }
+.icon-btn {
+  width:32px; height:32px; border-radius:var(--radius-sm); border:1px solid var(--border);
+  background:var(--surface); color:var(--text-secondary); cursor:pointer; display:flex;
+  align-items:center; justify-content:center; font-size:14px; transition:all .12s;
+}
+.icon-btn:hover { border-color:var(--green); color:var(--green); }
+.user-avatar {
+  width:32px; height:32px; border-radius:50%; background:var(--green); color:#fff;
+  display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600;
+  cursor:pointer; border:2px solid var(--surface); box-shadow:var(--shadow-sm);
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  background:var(--surface); border-right:1px solid var(--border);
+  display:flex; flex-direction:column; align-items:center; padding:12px 0; gap:4px;
+  overflow-y:auto;
+}
+.nav-item {
+  width:40px; height:40px; border-radius:var(--radius-sm); border:none; background:none;
+  display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer;
+  color:var(--text-tertiary); position:relative; transition:all .12s;
+}
+.nav-item:hover { background:var(--bg); color:var(--text); }
+.nav-item.active { background:var(--green-light); color:var(--green); }
+.nav-badge {
+  position:absolute; top:2px; right:2px; min-width:14px; height:14px; border-radius:7px;
+  background:var(--red); color:#fff; font-size:9px; font-weight:700; display:flex;
+  align-items:center; justify-content:center; padding:0 3px; border:2px solid var(--surface);
+}
+.nav-badge.hide { display:none; }
+.sidebar-divider { width:24px; height:1px; background:var(--border); margin:4px 0; }
+
+/* ── Main ── */
+.main { overflow-y:auto; padding:20px; }
+.page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+.page-title { font-size:20px; font-weight:700; letter-spacing:-0.4px; }
+.page-sub { font-size:12px; color:var(--text-secondary); margin-top:2px; }
+
+/* ── Dashboard Grid ── */
+.dash-grid {
+  display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;
+}
+@media (max-width:1100px) { .dash-grid { grid-template-columns:1fr 1fr; } }
+@media (max-width:720px) { .dash-grid { grid-template-columns:1fr; } }
+
+/* ── Card ── */
+.card {
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  box-shadow:var(--shadow-sm); display:flex; flex-direction:column; overflow:hidden;
+  transition:box-shadow .15s, transform .15s;
+}
+.card:hover { box-shadow:var(--shadow-lg); }
+.card-header {
+  padding:14px 16px; border-bottom:1px solid var(--border-light);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.card-title { font-size:13px; font-weight:600; color:var(--text); }
+.card-actions { display:flex; gap:6px; }
+.card-body { padding:8px 0; flex:1; overflow-y:auto; }
+
+.btn {
+  display:inline-flex; align-items:center; gap:4px; padding:5px 10px; border-radius:var(--radius-sm);
+  font-family:var(--font); font-size:12px; font-weight:500; cursor:pointer; border:none; transition:all .12s;
+}
+.btn-green { background:var(--green); color:#fff; }
+.btn-green:hover { background:#15803d; }
+.btn-ghost { background:transparent; color:var(--text-secondary); border:1px solid var(--border); }
+.btn-ghost:hover { background:var(--bg); color:var(--text); }
+.btn-sm { padding:3px 8px; font-size:11px; }
+
+/* ── List Items ── */
+.list-item {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 16px; cursor:pointer; transition:background .1s; border-bottom:1px solid var(--border-light);
+}
+.list-item:last-child { border-bottom:none; }
+.list-item:hover { background:var(--surface-2); }
+.item-left { display:flex; align-items:center; gap:10px; flex:1; min-width:0; }
+.item-icon { width:28px; height:28px; border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+.item-icon.green { background:var(--green-light); }
+.item-icon.amber { background:var(--amber-light); }
+.item-icon.red { background:var(--red-light); }
+.item-icon.blue { background:var(--blue-light); }
+.item-icon.purple { background:var(--purple-light); }
+.item-icon.gray { background:var(--bg); }
+.item-label { font-weight:500; font-size:12px; color:var(--text); }
+.item-meta { font-size:11px; color:var(--text-tertiary); margin-top:1px; }
+.item-right { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.badge {
+  font-size:11px; font-weight:600; padding:2px 8px; border-radius:12px; white-space:nowrap;
+}
+.badge-green { background:var(--green-light); color:var(--green-text); }
+.badge-amber { background:var(--amber-light); color:var(--amber-text); }
+.badge-red { background:var(--red-light); color:var(--red-text); }
+.badge-blue { background:var(--blue-light); color:var(--blue-text); }
+.badge-gray { background:var(--bg); color:var(--text-secondary); }
+.count { font-size:12px; font-weight:600; color:var(--text); font-variant-numeric:tabular-nums; }
+.arrow { color:var(--text-tertiary); font-size:12px; }
+
+/* ── KPI Row ── */
+.kpi-row {
+  display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; margin-bottom:20px;
+}
+@media (max-width:900px) { .kpi-row { grid-template-columns:repeat(2, 1fr); } }
+.kpi-card {
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  padding:16px; box-shadow:var(--shadow-sm); display:flex; flex-direction:column; gap:4px;
+  transition:box-shadow .15s, transform .15s;
+}
+.kpi-card:hover { box-shadow:var(--shadow-lg); transform:translateY(-1px); }
+.kpi-label { font-size:11px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em; }
+.kpi-value { font-size:24px; font-weight:700; color:var(--text); letter-spacing:-0.5px; }
+.kpi-value.green { color:var(--green); }
+.kpi-value.amber { color:var(--amber); }
+.kpi-value.red { color:var(--red); }
+.kpi-value.blue { color:var(--blue); }
+.kpi-sub { font-size:11px; color:var(--text-tertiary); }
+.kpi-bar { height:4px; background:var(--border-light); border-radius:2px; margin-top:6px; overflow:hidden; }
+.kpi-bar-fill { height:100%; border-radius:2px; transition:width .4s ease; }
+
+/* ── Activity Feed ── */
+.activity-feed { padding:0; }
+.activity-item {
+  display:flex; align-items:flex-start; gap:10px; padding:10px 16px;
+  border-bottom:1px solid var(--border-light); transition:background .1s;
+}
+.activity-item:last-child { border-bottom:none; }
+.activity-item:hover { background:var(--surface-2); }
+.activity-dot { width:8px; height:8px; border-radius:50%; margin-top:4px; flex-shrink:0; }
+.activity-dot.green { background:var(--green); }
+.activity-dot.amber { background:var(--amber); }
+.activity-dot.red { background:var(--red); }
+.activity-dot.blue { background:var(--blue); }
+.activity-body { flex:1; min-width:0; }
+.activity-title { font-size:12px; font-weight:500; color:var(--text); line-height:1.4; }
+.activity-meta { font-size:11px; color:var(--text-tertiary); margin-top:2px; }
+
+/* ── Commodity Table ── */
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:12px; }
+th { text-align:left; padding:8px 12px; font-size:10px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em; background:var(--surface-2); border-bottom:1px solid var(--border); white-space:nowrap; }
+td { padding:8px 12px; border-bottom:1px solid var(--border-light); color:var(--text); white-space:nowrap; }
+tr:hover td { background:var(--surface-2); }
+.mono { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:11px; }
+
+/* ── Modal ── */
+.modal-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,0.35); backdrop-filter:blur(4px);
+  display:none; align-items:center; justify-content:center; z-index:1000; padding:20px;
+}
+.modal-overlay.show { display:flex; }
+.modal {
+  background:var(--surface); border-radius:var(--radius); width:100%; max-width:520px;
+  max-height:90vh; overflow-y:auto; box-shadow:0 20px 40px rgba(0,0,0,0.15);
+  animation:modalIn .2s ease;
+}
+@keyframes modalIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+.modal-header { padding:16px 20px; border-bottom:1px solid var(--border-light); display:flex; justify-content:space-between; align-items:center; }
+.modal-title { font-size:15px; font-weight:700; }
+.modal-close { background:none; border:none; font-size:18px; cursor:pointer; color:var(--text-tertiary); }
+.modal-close:hover { color:var(--text); }
+.modal-body { padding:16px 20px; }
+.modal-footer { padding:12px 20px 16px; border-top:1px solid var(--border-light); display:flex; justify-content:flex-end; gap:8px; }
+
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.form-grid.cols-3 { grid-template-columns:1fr 1fr 1fr; }
+@media (max-width:600px) { .form-grid, .form-grid.cols-3 { grid-template-columns:1fr; } }
+.field { display:flex; flex-direction:column; gap:4px; }
+.field.full { grid-column:1 / -1; }
+label { font-size:11px; font-weight:600; color:var(--text-secondary); }
+input, select, textarea {
+  padding:7px 10px; border:1px solid var(--border); border-radius:var(--radius-sm);
+  font-family:var(--font); font-size:12px; color:var(--text); background:var(--surface-2);
+  outline:none; transition:all .12s; width:100%;
+}
+input:focus, select:focus, textarea:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba(22,163,74,0.08); background:var(--surface); }
+select { cursor:pointer; }
+.hint { font-size:11px; color:var(--text-tertiary); margin-top:4px; }
+.err { color:var(--red); font-size:12px; margin-top:4px; }
+
+/* ── Toast ── */
+.toast {
+  position:fixed; bottom:20px; right:20px; background:var(--text); color:#fff;
+  padding:10px 16px; border-radius:var(--radius-sm); font-size:12px; font-weight:500;
+  box-shadow:var(--shadow-lg); z-index:2000; transform:translateY(80px); opacity:0;
+  transition:all .3s ease; display:flex; align-items:center; gap:8px;
+}
+.toast.show { transform:translateY(0); opacity:1; }
+.toast.green { background:var(--green); }
+.toast.red { background:var(--red); }
+.toast.amber { background:var(--amber); }
+
+/* ── Empty State ── */
+.empty { text-align:center; padding:24px; color:var(--text-tertiary); font-size:12px; }
+.empty-icon { font-size:28px; margin-bottom:6px; opacity:.5; }
+
+/* ── Views ── */
+.view { display:none; animation:fadeIn .2s ease; }
+.view.active { display:block; }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+/* ── Print ── */
+@media print {
+  .sidebar, .topbar, .no-print { display:none !important; }
+  .app { display:block; }
+  .main { padding:0; }
+}
+</style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div class="login-overlay" id="loginWrap">
+  <div class="login-box">
+    <div class="login-logo">AGV<span>·</span>Maize Seed</div>
+    <div class="login-tagline">Operations & Processing Dashboard</div>
+    <div class="login-field">
+      <label>Email</label>
+      <input type="email" id="loginEmail" placeholder="you@agv.co.ke" autocomplete="email">
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-err" id="loginErr"></div>
+    <button class="btn btn-green login-btn" onclick="doLogin()">Sign In</button>
+    <div class="login-footer">Restricted to authorised AGV personnel</div>
+  </div>
+</div>
+
+<div class="app" id="app">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+    <div class="brand">AGV<span>·</span>Maize Seed</div>
+    <div class="breadcrumb"><a href="#" onclick="switchView('dashboard')">Home</a> <span style="color:var(--text-tertiary)">›</span> <span id="pageCrumb">Dashboard</span></div>
+    <div class="search-wrap">
+      <input type="text" id="globalSearch" placeholder="Search stocks, shifts, commodities…" oninput="handleSearch(this.value)">
+    </div>
+    <div class="topbar-actions">
+      <button class="icon-btn" onclick="refreshAll()" title="Refresh">↻</button>
+      <button class="icon-btn" onclick="toggleDarkMode()" title="Toggle dark mode" id="darkModeBtn">🌙</button>
+      <button class="icon-btn" onclick="toggleNotifPanel()" title="Notifications">🔔</button>
+      <div class="user-avatar" id="userAvatar" onclick="doLogout()">?</div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <button class="nav-item active" data-view="dashboard" onclick="switchView('dashboard')" title="Dashboard">📊</button>
+    <button class="nav-item" data-view="stock" onclick="switchView('stock')" title="Stock">📦</button>
+    <button class="nav-item" data-view="maize" onclick="switchView('maize')" title="Maize">🌽</button>
+    <div class="sidebar-divider"></div>
+    <button class="nav-item" onclick="openShiftModal()" title="Log Shift">➕</button>
+    <button class="nav-item" data-view="settings" onclick="switchView('settings')" title="Settings">⚙️</button>
+  </div>
+
+  <!-- Main -->
+  <div class="main" id="main">
+
+    <!-- ═════ DASHBOARD ═════ -->
+    <div class="view active" id="view-dashboard">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Operations at a Glance</div>
+          <div class="page-sub" id="dashDate">—</div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-green" onclick="openShiftModal()" title="Ctrl+K">+ Log Shift</button>
+          <button class="btn btn-ghost" onclick="exportDailyReport()">Export</button>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-label">Raw Stock</div>
+          <div class="kpi-value blue" id="kpi-raw">—</div>
+          <div class="kpi-sub">kg total intake</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">WIP</div>
+          <div class="kpi-value amber" id="kpi-wip">—</div>
+          <div class="kpi-sub">kg in process</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Finished Goods</div>
+          <div class="kpi-value green" id="kpi-fg">—</div>
+          <div class="kpi-sub">kg packed & ready</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Maize Contract</div>
+          <div class="kpi-value green" id="kpi-contract">—</div>
+          <div class="kpi-sub">of 5,000 tonnes target</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill" id="kpi-contract-bar" style="width:0%; background:var(--green)"></div></div>
+        </div>
+      </div>
+
+      <!-- Three Columns -->
+      <div class="dash-grid">
+        <!-- Stock Status -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Stock Status</div>
+            <div class="card-actions">
+              <button class="btn btn-ghost btn-sm" onclick="switchView('stock')">View All</button>
+            </div>
+          </div>
+          <div class="card-body" id="stockStatusBody">
+            <div class="empty"><div class="spinner" style="margin:0 auto; width:20px; height:20px; border:2px solid var(--border); border-top-color:var(--green); border-radius:50%; animation:spin 1s linear infinite;"></div></div>
+          </div>
+        </div>
+
+        <!-- Quality & Chemicals -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Quality & Chemicals</div>
+            <div class="card-actions">
+              <button class="btn btn-ghost btn-sm" onclick="adjustChemStock('gaucho_flex')">Adjust</button>
+            </div>
+          </div>
+          <div class="card-body" id="qcBody">
+            <div class="empty"><div class="spinner" style="margin:0 auto; width:20px; height:20px; border:2px solid var(--border); border-top-color:var(--green); border-radius:50%; animation:spin 1s linear infinite;"></div></div>
+          </div>
+        </div>
+
+        <!-- Processing Status -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Processing Status</div>
+            <div class="card-actions">
+              <button class="btn btn-ghost btn-sm" onclick="switchView('maize')">Details</button>
+            </div>
+          </div>
+          <div class="card-body" id="processingBody">
+            <div class="empty"><div class="spinner" style="margin:0 auto; width:20px; height:20px; border:2px solid var(--border); border-top-color:var(--green); border-radius:50%; animation:spin 1s linear infinite;"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="card" style="margin-top:16px;">
+        <div class="card-header">
+          <div class="card-title">Recent Activity</div>
+          <div class="card-actions">
+            <button class="btn btn-ghost btn-sm" onclick="refreshActivity()">↻ Refresh</button>
+          </div>
+        </div>
+        <div class="card-body activity-feed" id="activityBody">
+          <div class="empty">Loading activity…</div>
+        </div>
+      </div>
+
+      <!-- Commodity Quick Ref -->
+      <div class="card" style="margin-top:16px;">
+        <div class="card-header">
+          <div class="card-title">Commodity Limits — Quick Reference</div>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Crop</th><th>Moisture</th><th>Impurities</th><th>OEG</th><th>Noxious</th><th>Test Wt</th><th>Aflatoxin</th></tr></thead>
+              <tbody id="commodityTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════ STOCK ═════ -->
+    <div class="view" id="view-stock">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Stock & Accounting</div>
+          <div class="page-sub">Raw → WIP → Finished Goods → Dispatch</div>
+        </div>
+        <button class="btn btn-ghost" onclick="refreshAll()">↻ Refresh</button>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi-card"><div class="kpi-label">Raw Stock</div><div class="kpi-value blue" id="stock-raw">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">WIP</div><div class="kpi-value amber" id="stock-wip">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">Finished Goods</div><div class="kpi-value green" id="stock-fg">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">Dispatched</div><div class="kpi-value" id="stock-out" style="color:var(--text-secondary)">—</div></div>
+      </div>
+      <div class="dash-grid" style="grid-template-columns:1fr 1fr;">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Raw Material Balances</div></div>
+          <div class="card-body" id="rawStockBody"><div class="empty">Loading…</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Finished Goods Balances</div></div>
+          <div class="card-body" id="fgStockBody"><div class="empty">Loading…</div></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px;">
+        <div class="card-header">
+          <div class="card-title">Stock Movement Ledger</div>
+          <select id="ledgerFilter" style="padding:4px 8px; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; background:var(--surface);" onchange="renderLedger()">
+            <option value="all">All movements</option>
+            <option value="IN">Stock IN</option>
+            <option value="OUT">Stock OUT</option>
+          </select>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Time</th><th>Type</th><th>Stage</th><th>Item</th><th>Qty</th><th>Balance</th><th>Reference</th><th>By</th></tr></thead>
+              <tbody id="ledgerTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════ MAIZE ═════ -->
+    <div class="view" id="view-maize">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Maize Seed Processing</div>
+          <div class="page-sub">SOP-008 | Auto-calculated per tonne formulation</div>
+        </div>
+        <button class="btn btn-green" onclick="openShiftModal()" title="Ctrl+K">+ Log Shift</button>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi-card"><div class="kpi-label">Contract Target</div><div class="kpi-value blue">5,000 t</div></div>
+        <div class="kpi-card"><div class="kpi-label">Processed</div><div class="kpi-value green" id="m-processed">0</div></div>
+        <div class="kpi-card"><div class="kpi-label">Remaining</div><div class="kpi-value amber" id="m-remaining">5,000</div></div>
+        <div class="kpi-card"><div class="kpi-label">Completion</div><div class="kpi-value" id="m-completion" style="color:var(--green)">0%</div><div class="kpi-bar"><div class="kpi-bar-fill" id="m-bar" style="width:0%; background:var(--green)"></div></div></div>
+      </div>
+      <div class="dash-grid" style="grid-template-columns:1fr 1fr;">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Seed Treater Specs</div></div>
+          <div class="card-body">
+            <div class="list-item"><div class="item-left"><div class="item-icon gray">⚙</div><div><div class="item-label">Design Capacity</div></div></div><div class="mono">8 t/hr</div></div>
+            <div class="list-item"><div class="item-left"><div class="item-icon green">✓</div><div><div class="item-label">Optimal Rate</div></div></div><div class="mono" style="color:var(--green); font-weight:600;">6.5 t/hr</div></div>
+            <div class="list-item"><div class="item-left"><div class="item-icon gray">📐</div><div><div class="item-label">Accuracy</div></div></div><div class="mono">±2%</div></div>
+            <div class="list-item"><div class="item-left"><div class="item-icon green">✓</div><div><div class="item-label">Polymer Cover</div></div></div><div class="mono" style="color:var(--green)">>98%</div></div>
+            <div class="list-item"><div class="item-left"><div class="item-icon green">✓</div><div><div class="item-label">Dust-off Reduction</div></div></div><div class="mono" style="color:var(--green)">>95%</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Chemical Requirements <span class="badge badge-gray">Auto-calc</span></div></div>
+          <div class="card-body" id="chemCalcBody">
+            <div class="list-item"><div class="item-left"><div class="item-icon blue">💧</div><div><div class="item-label">Gaucho Flex</div></div></div><div class="mono" id="calcGaucho">0 L</div></div>
+            <div class="list-item"><div class="item-left"><div class="item-icon blue">💧</div><div><div class="item-label">Maxim</div></div></div><div class="mono" id="calcMaxim">0 L</div></div>
+            <div class="list-item"><div class="item-left"><div class="item-icon blue">💧</div><div><div class="item-label">Peridium</div></div></div><div class="mono" id="calcPeridium">0 L</div></div>
+            <div class="list-item"><div class="item-left"><div class="item-icon gray">💧</div><div><div class="item-label">Water (Carrier)</div></div></div><div class="mono" id="calcWater">0 L</div></div>
+            <div class="list-item" style="border-top:2px solid var(--border-light);"><div class="item-left"><div class="item-icon green">∑</div><div><div class="item-label" style="font-weight:700">Total Slurry</div></div></div><div class="mono" style="font-weight:700" id="calcTotalSlurry">0 L</div></div>
+          </div>
+          <div style="padding:0 16px 12px; font-size:11px; color:var(--text-tertiary);">SOP-008: 1.75L Gaucho + 1L Maxim + 2L Peridium + 5.25L Water per tonne seed</div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px;">
+        <div class="card-header"><div class="card-title">Shift Production Log</div><div class="card-actions"><button class="btn btn-ghost" onclick="exportShiftsCSV()">Export CSV</button><button class="btn btn-green" onclick="exportToExcelTemplate()">Export to Excel</button></div></div>
+        <div class="card-body" style="padding:0;">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Date</th><th>Shift</th><th>Supervisor</th><th>Hrs</th><th>Seed Used</th><th>Output</th><th>Loss</th><th>Yield</th><th>2kg</th><th>20kg</th><th>50kg</th><th class="no-print">Actions</th></tr></thead>
+              <tbody id="shiftTable"><tr><td colspan="12" style="text-align:center; padding:16px; color:var(--text-tertiary);">No shifts logged</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px;">
+        <div class="card-header"><div class="card-title">Chemical Inventory — Live Balances</div></div>
+        <div class="card-body" style="padding:0;">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Item</th><th>Stock (L)</th><th>Reorder Pt</th><th>Status</th><th></th></tr></thead>
+              <tbody id="chemInvTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════ SETTINGS ═════ -->
+    <div class="view" id="view-settings">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Settings</div>
+          <div class="page-sub">Firebase connection and app configuration</div>
+        </div>
+      </div>
+      <div class="dash-grid" style="grid-template-columns:1fr;">
+        <div class="card" style="max-width:640px;">
+          <div class="card-header"><div class="card-title">Firebase Configuration</div></div>
+          <div class="card-body" style="padding:16px;">
+            <p style="font-size:12px; color:var(--text-secondary); margin-bottom:16px;">Update these to match your Firebase project. Changes are saved to localStorage.</p>
+            <div class="form-grid">
+              <div class="field full"><label>Database URL</label><input type="text" id="cfgDbUrl" placeholder="https://your-project-default-rtdb.firebaseio.com"></div>
+              <div class="field"><label>API Key</label><input type="text" id="cfgApiKey" placeholder="AIzaSy..."></div>
+              <div class="field"><label>Web App Secret</label><input type="password" id="cfgSecret" placeholder="your-web-app-secret"></div>
+            </div>
+            <div style="margin-top:16px; display:flex; gap:8px; align-items:center;">
+              <button class="btn btn-green" onclick="saveSettings()">Save & Reconnect</button>
+              <span style="font-size:12px; color:var(--text-tertiary);" id="settingsStatus"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Shift Modal -->
+<div class="modal-overlay" id="shiftModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="shiftModalTitle">Log Production Shift</div>
+      <button class="modal-close" onclick="closeShiftModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--blue-light); border:1px solid rgba(37,99,235,0.15); border-radius:var(--radius-sm); padding:8px 12px; margin-bottom:16px; font-size:12px; color:var(--blue-text); display:flex; justify-content:space-between; align-items:center;">
+        <span>Available raw maize seed stock:</span>
+        <span class="mono" style="font-weight:700;" id="msAvailStock">— kg</span>
+      </div>
+      <div id="msChemWarning" style="display:none; background:var(--amber-light); border:1px solid rgba(217,119,6,0.2); border-radius:var(--radius-sm); padding:8px 12px; margin-bottom:16px; font-size:12px; color:var(--amber-text);"></div>
+      <div class="form-grid cols-3">
+        <div class="field"><label>Date</label><input type="date" id="msDate"></div>
+        <div class="field"><label>Shift</label><select id="msShift"><option value="A">A</option><option value="B">B</option></select></div>
+        <div class="field"><label>Supervisor</label><input type="text" id="msSupervisor" placeholder="Name"></div>
+        <div class="field"><label>Start</label><input type="time" id="msStart" value="06:00"></div>
+        <div class="field"><label>Stop</label><input type="time" id="msStop" value="18:00"></div>
+        <div class="field"><label>Seed Used (kg)</label><input type="number" id="msSeedUsed" placeholder="0" oninput="checkSeedAvailability(); autoPopulateChemFields();"></div>
+        <div class="field"><label>Treater Output (kg)</label><input type="number" id="msTreaterOut" placeholder="0"></div>
+        <div class="field"><label>Screenings (kg)</label><input type="number" id="msScreenings" placeholder="0"></div>
+        <div class="field"><label>Gaucho Flex (L)</label><input type="number" id="msGaucho" placeholder="0" step="0.1" oninput="checkChemAvailability()"></div>
+        <div class="field"><label>Maxim (L)</label><input type="number" id="msMaxim" placeholder="0" step="0.1" oninput="checkChemAvailability()"></div>
+        <div class="field"><label>Peridium (L)</label><input type="number" id="msPeridium" placeholder="0" step="0.1" oninput="checkChemAvailability()"></div>
+        <div class="field"><label>2kg Bags</label><input type="number" id="msBags2" placeholder="0"></div>
+        <div class="field"><label>20kg Bags</label><input type="number" id="msBags20" placeholder="0"></div>
+        <div class="field"><label>50kg Bags</label><input type="number" id="msBags50" placeholder="0"></div>
+        <div class="field full"><label>Notes</label><textarea id="msNotes" rows="2" placeholder="Issues, downtime…" style="resize:vertical;"></textarea></div>
+      </div>
+      <div class="err" id="shiftErr"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeShiftModal()">Cancel</button>
+      <button class="btn btn-green" onclick="saveShift()" id="shiftSaveBtn">Save & Update Stock</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"><span id="toastMsg">Ready</span></div>
+
+<script>
+/* ── CONFIG ── */
+let CFG = {
+  databaseUrl: "https://kimaru-98dfc-default-rtdb.firebaseio.com",
+  apiKey: "AIzaSyCs3ZSdfv34HUEOCHnRlH6Bic545t9x6xU",
+  authEmail: "",
+  scriptUrl: "",
+  webAppSecret: ""
+};
+
+function loadStoredConfig() {
+  const s = localStorage.getItem("agv_intake_cfg");
+  if (s) try { Object.assign(CFG, JSON.parse(s)); } catch(e){}
+  ["cfgDbUrl","cfgApiKey","cfgSecret"].forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el && CFG[["databaseUrl","apiKey","webAppSecret"][i]]) el.value = CFG[["databaseUrl","apiKey","webAppSecret"][i]];
+  });
+}
+function saveSettings() {
+  CFG.databaseUrl = document.getElementById("cfgDbUrl").value.trim();
+  CFG.apiKey = document.getElementById("cfgApiKey").value.trim();
+  CFG.webAppSecret = document.getElementById("cfgSecret").value.trim();
+  localStorage.setItem("agv_intake_cfg", JSON.stringify(CFG));
+  document.getElementById("settingsStatus").textContent = "✓ Saved";
+  toast("Configuration saved", "green");
+  setTimeout(() => document.getElementById("settingsStatus").textContent = "", 2000);
+}
+
+/* ── AUTH ── */
+let _token = null, _tokenExpiry = 0, _uid = null, _userEmail = null;
+let _editingShiftId = null;
+
+/* ── DARK MODE ── */
+function toggleDarkMode() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute("data-theme") === "dark";
+  if (isDark) {
+    html.removeAttribute("data-theme");
+    localStorage.setItem("agv_theme", "light");
+    document.getElementById("darkModeBtn").textContent = "🌙";
+  } else {
+    html.setAttribute("data-theme", "dark");
+    localStorage.setItem("agv_theme", "dark");
+    document.getElementById("darkModeBtn").textContent = "☀️";
+  }
+}
+function loadTheme() {
+  const theme = localStorage.getItem("agv_theme");
+  if (theme === "dark") {
+    document.documentElement.setAttribute("data-theme", "dark");
+    const btn = document.getElementById("darkModeBtn");
+    if (btn) btn.textContent = "☀️";
+  }
+}
+
+async function signIn(email, password) {
+  const url = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${CFG.apiKey}`;
+  const r = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({email, password, returnSecureToken:true}) });
+  const d = await r.json();
+  if (!d.idToken) throw new Error(d.error?.message || "Authentication failed");
+  _token = d.idToken; _tokenExpiry = Date.now() + parseInt(d.expiresIn)*1000;
+  _uid = d.localId; _userEmail = email;
+  return d;
+}
+async function getToken() {
+  if (_token && Date.now() < _tokenExpiry - 300000) return _token;
+  throw new Error("Session expired");
+}
+
+/* ── DB ── */
+async function fbGet(path) {
+  const t = await getToken();
+  const r = await fetch(`${CFG.databaseUrl}${path}.json?auth=${t}`);
+  if (!r.ok) throw new Error(`DB read failed: ${path} (${r.status})`);
+  return r.json();
+}
+async function fbPush(path, data) {
+  const t = await getToken();
+  const r = await fetch(`${CFG.databaseUrl}${path}.json?auth=${t}`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(data) });
+  if (!r.ok) throw new Error(`DB push failed: ${path} (${r.status})`);
+  return r.json();
+}
+async function fbUpdate(path, data) {
+  const t = await getToken();
+  const r = await fetch(`${CFG.databaseUrl}${path}.json?auth=${t}`, { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify(data) });
+  if (!r.ok) throw new Error(`DB patch failed: ${path} (${r.status})`);
+  return r.json();
+}
+
+/* ── LOGIN ── */
+async function doLogin() {
+  const email = document.getElementById("loginEmail").value.trim();
+  const pass = document.getElementById("loginPassword").value;
+  const err = document.getElementById("loginErr");
+  err.textContent = "";
+  if (!email || !pass) { err.textContent = "Enter your email and password"; return; }
+  err.textContent = "Signing in…";
+  try {
+    await signIn(email, pass);
+    CFG.authEmail = email;
+    document.getElementById("loginWrap").style.display = "none";
+    initApp();
+  } catch(e) {
+    err.textContent = e.message.includes("INVALID_LOGIN_CREDENTIALS") ? "Incorrect email or password" : e.message;
+  }
+}
+function doLogout() {
+  _token = null; _uid = null; _userEmail = null;
+  document.getElementById("loginWrap").style.display = "flex";
+  document.getElementById("loginPassword").value = "";
+  document.getElementById("loginErr").textContent = "";
+}
+
+/* ── INIT ── */
+function initApp() {
+  const email = _userEmail || "";
+  const name = email.split("@")[0].split(".").map(w => w[0]?.toUpperCase()+w.slice(1)).join(" ");
+  document.getElementById("userAvatar").textContent = (name[0]||"U").toUpperCase();
+  document.getElementById("dashDate").textContent = todayDisplay();
+  loadDashboard();
+  loadStockLedger();
+  loadMaizeData();
+}
+
+/* ── VIEWS ── */
+function switchView(name) {
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+  const viewEl = document.getElementById("view-"+name);
+  if (viewEl) viewEl.classList.add("active");
+  const navEl = document.querySelector(`.nav-item[data-view="${name}"]`);
+  if (navEl) navEl.classList.add("active");
+  document.getElementById("pageCrumb").textContent = name.charAt(0).toUpperCase() + name.slice(1);
+  if (name === "dashboard") loadDashboard();
+  if (name === "stock") loadStockLedger();
+  if (name === "maize") loadMaizeData();
+}
+
+/* ── TOAST ── */
+let toastTimer;
+function toast(msg, type="green") {
+  const t = document.getElementById("toast");
+  const m = document.getElementById("toastMsg");
+  m.textContent = msg;
+  t.className = "toast " + type;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 3000);
+}
+
+/* ── DATE HELPERS ── */
+function todayStr() { return new Date().toLocaleDateString("en-KE",{timeZone:"Africa/Nairobi",year:"numeric",month:"2-digit",day:"2-digit"}).split("/").reverse().join("-"); }
+function todayStrISO() { return new Date().toLocaleDateString("en-CA",{timeZone:"Africa/Nairobi"}); }
+function todayDisplay() { return new Date().toLocaleDateString("en-KE",{timeZone:"Africa/Nairobi",weekday:"long",year:"numeric",month:"long",day:"numeric"}); }
+function nowTime() { return new Date().toLocaleTimeString("en-KE",{timeZone:"Africa/Nairobi",hour:"2-digit",minute:"2-digit"}); }
+function nowTime24() { return new Date().toLocaleTimeString("en-KE",{timeZone:"Africa/Nairobi",hour:"2-digit",minute:"2-digit",hour12:false}); }
+
+/* ── STOCK ── */
+const REORDER_POINTS = { CHEM: { gaucho_flex: 100, maxim: 60, peridium: 80 } };
+const CHEM_LABELS = { gaucho_flex: "Gaucho Flex", maxim: "Maxim", peridium: "Peridium" };
+let _stockBalances = { RAW: {}, WIP: {}, FG: {}, CHEM: {} };
+let _ledgerEntries = [];
+let _shifts = [];
+
+async function getStockBalances() {
+  try {
+    const data = await fbGet("/stock_balances");
+    _stockBalances = { RAW: data?.RAW||{}, WIP: data?.WIP||{}, FG: data?.FG||{}, CHEM: data?.CHEM||{} };
+  } catch(e) {
+    const cached = localStorage.getItem("agv_stock_balances");
+    _stockBalances = cached ? JSON.parse(cached) : { RAW:{}, WIP:{}, FG:{}, CHEM:{} };
+  }
+  return _stockBalances;
+}
+function cacheStockBalances() { localStorage.setItem("agv_stock_balances", JSON.stringify(_stockBalances)); }
+
+async function recordStockMovement(stage, itemKey, qty, direction, refType, refLabel) {
+  await getStockBalances();
+  const current = _stockBalances[stage][itemKey] || 0;
+  const newBalance = direction === "IN" ? current + qty : Math.max(0, current - qty);
+  _stockBalances[stage][itemKey] = newBalance;
+  cacheStockBalances();
+  const entry = { stage, itemKey, qty, direction, refType, refLabel, balanceAfter: newBalance, by: _userEmail||"system", timestamp: Date.now() };
+  try {
+    await fbUpdate(`/stock_balances/${stage}`, { [itemKey]: newBalance });
+    await fbPush("/stock_ledger", entry);
+  } catch(e) {
+    const q = JSON.parse(localStorage.getItem("agv_ledger_queue")||"[]");
+    q.push(entry);
+    localStorage.setItem("agv_ledger_queue", JSON.stringify(q));
+  }
+  return newBalance;
+}
+
+async function loadStockLedger() {
+  await getStockBalances();
+  try {
+    const data = await fbGet("/stock_ledger");
+    _ledgerEntries = data ? Object.values(data).sort((a,b) => b.timestamp - a.timestamp) : [];
+  } catch(e) { _ledgerEntries = []; }
+  renderStockView();
+}
+
+function renderStockView() {
+  const rawTotal = Object.values(_stockBalances.RAW).reduce((s,v) => s+v, 0);
+  const wipTotal = Object.values(_stockBalances.WIP).reduce((s,v) => s+v, 0);
+  const fgTotal = Object.values(_stockBalances.FG).reduce((s,v) => s+v, 0);
+  const outTotal = _ledgerEntries.filter(e => e.refType === "DISPATCH").reduce((s,e) => s+e.qty, 0);
+
+  document.getElementById("stock-raw").textContent = rawTotal.toLocaleString();
+  document.getElementById("stock-wip").textContent = wipTotal.toLocaleString();
+  document.getElementById("stock-fg").textContent = fgTotal.toLocaleString();
+  document.getElementById("stock-out").textContent = outTotal.toLocaleString();
+  document.getElementById("kpi-raw").textContent = rawTotal.toLocaleString();
+  document.getElementById("kpi-wip").textContent = wipTotal.toLocaleString();
+  document.getElementById("kpi-fg").textContent = fgTotal.toLocaleString();
+
+  // Raw stock list
+  const rawList = document.getElementById("rawStockBody");
+  const rawKeys = Object.keys(_stockBalances.RAW);
+  rawList.innerHTML = rawKeys.length ? rawKeys.map(k => {
+    const label = k.replace(/_/g," ").replace(/\b\w/g, c => c.toUpperCase());
+    return `<div class="list-item"><div class="item-left"><div class="item-icon blue">📦</div><div><div class="item-label">${label}</div></div></div><div class="count">${(_stockBalances.RAW[k]||0).toLocaleString()} kg</div></div>`;
+  }).join("") : '<div class="empty">No raw stock recorded</div>';
+
+  // FG list
+  const fgList = document.getElementById("fgStockBody");
+  const fgKeys = Object.keys(_stockBalances.FG);
+  fgList.innerHTML = fgKeys.length ? fgKeys.map(k => {
+    const label = k.replace(/_/g," ").replace(/\b\w/g, c => c.toUpperCase());
+    return `<div class="list-item"><div class="item-left"><div class="item-icon green">✓</div><div><div class="item-label">${label}</div></div></div><div class="count">${(_stockBalances.FG[k]||0).toLocaleString()} kg</div></div>`;
+  }).join("") : '<div class="empty">No finished goods</div>';
+
+  renderLedger();
+  renderChemInventory();
+}
+
+function renderLedger() {
+  const filter = document.getElementById("ledgerFilter")?.value || "all";
+  let rows = _ledgerEntries;
+  if (filter === "IN" || filter === "OUT") rows = rows.filter(e => e.direction === filter);
+  const tbody = document.getElementById("ledgerTable");
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:16px; color:var(--text-tertiary);">No movements</td></tr>'; return; }
+  tbody.innerHTML = rows.slice(0,50).map(e => {
+    const time = new Date(e.timestamp).toLocaleString("en-KE", {timeZone:"Africa/Nairobi", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"});
+    const color = e.direction === "IN" ? "var(--green)" : "var(--red)";
+    const sign = e.direction === "IN" ? "+" : "−";
+    const label = (e.itemKey||"").replace(/_/g," ").replace(/\b\w/g, c => c.toUpperCase());
+    return `<tr><td class="mono">${time}</td><td style="color:${color}; font-weight:600;">${sign} ${e.direction}</td><td><span class="badge badge-gray">${e.stage}</span></td><td>${label}</td><td class="mono" style="color:${color}">${sign}${e.qty.toLocaleString()}</td><td class="mono">${e.balanceAfter.toLocaleString()}</td><td>${e.refLabel||"—"}</td><td>${e.by?e.by.split("@")[0]:"—"}</td></tr>`;
+  }).join("");
+}
+
+function renderChemInventory() {
+  const tbody = document.getElementById("chemInvTable");
+  if (!tbody) return;
+  const keys = Object.keys(CHEM_LABELS);
+  tbody.innerHTML = keys.map(k => {
+    const qty = _stockBalances.CHEM[k] || 0;
+    const pt = REORDER_POINTS.CHEM[k];
+    const status = qty <= pt ? (qty <= pt*0.5 ? { cls:"badge-red", txt:"CRITICAL" } : { cls:"badge-amber", txt:"LOW" }) : { cls:"badge-green", txt:"OK" };
+    return `<tr><td>${CHEM_LABELS[k]}</td><td class="mono">${qty.toLocaleString()}</td><td class="mono">${pt}</td><td><span class="badge ${status.cls}">${status.txt}</span></td><td><button class="btn btn-ghost btn-sm" onclick="adjustChemStock('${k}')">Set</button></td></tr>`;
+  }).join("");
+}
+
+async function adjustChemStock(key) {
+  const current = _stockBalances.CHEM[key] || 0;
+  const input = prompt(`Set actual stock for ${CHEM_LABELS[key]} (litres). Current: ${current}`, current);
+  if (input === null) return;
+  const newQty = parseFloat(input);
+  if (isNaN(newQty) || newQty < 0) { toast("Enter a valid number", "red"); return; }
+  const diff = newQty - current;
+  if (diff === 0) return;
+  await recordStockMovement("CHEM", key, Math.abs(diff), diff > 0 ? "IN" : "OUT", "ADJUSTMENT", "Stocktake adjustment");
+  toast(`${CHEM_LABELS[key]} adjusted to ${newQty.toLocaleString()} L`, "green");
+  loadStockLedger();
+}
+
+/* ── DASHBOARD GLANCE ── */
+async function loadDashboard() {
+  document.getElementById("dashDate").textContent = todayDisplay();
+  await getStockBalances();
+
+  // KPIs
+  const rawTotal = Object.values(_stockBalances.RAW).reduce((s,v) => s+v, 0);
+  const wipTotal = Object.values(_stockBalances.WIP).reduce((s,v) => s+v, 0);
+  const fgTotal = Object.values(_stockBalances.FG).reduce((s,v) => s+v, 0);
+  document.getElementById("kpi-raw").textContent = rawTotal.toLocaleString();
+  document.getElementById("kpi-wip").textContent = wipTotal.toLocaleString();
+  document.getElementById("kpi-fg").textContent = fgTotal.toLocaleString();
+
+  // Maize contract
+  let processed = 0;
+  try {
+    const data = await fbGet("/maize_shifts");
+    if (data) {
+      _shifts = Object.entries(data).map(([id, val]) => ({ id, ...val }));
+    } else {
+      _shifts = [];
+    }
+    processed = _shifts.reduce((s,x) => s + (parseFloat(x.treaterOut)||0), 0) / 1000;
+  } catch(e) {
+    const cached = JSON.parse(localStorage.getItem("maize_shifts") || "[]");
+    _shifts = cached.map((s, i) => ({ ...s, id: s.id || `local_${Date.now()}_${i}` }));
+    processed = _shifts.reduce((s,x) => s + (parseFloat(x.treaterOut)||0), 0) / 1000;
+  }
+  const pct = Math.min(100, (processed / 5000) * 100);
+  document.getElementById("kpi-contract").textContent = processed.toFixed(1) + " t";
+  document.getElementById("kpi-contract-bar").style.width = pct + "%";
+
+  // Stock status column
+  const stockBody = document.getElementById("stockStatusBody");
+  const rawKeys = Object.keys(_stockBalances.RAW);
+  const fgKeys = Object.keys(_stockBalances.FG);
+  let stockHTML = "";
+  if (rawKeys.length) {
+    stockHTML += rawKeys.slice(0,4).map(k => {
+      const label = k.replace(/_/g," ").replace(/\b\w/g, c => c.toUpperCase());
+      return `<div class="list-item" onclick="switchView('stock')"><div class="item-left"><div class="item-icon blue">📦</div><div><div class="item-label">${label}</div><div class="item-meta">Raw material</div></div></div><div class="count">${(_stockBalances.RAW[k]||0).toLocaleString()} kg</div></div>`;
+    }).join("");
+  }
+  if (fgKeys.length) {
+    stockHTML += fgKeys.slice(0,3).map(k => {
+      const label = k.replace(/_/g," ").replace(/\b\w/g, c => c.toUpperCase());
+      return `<div class="list-item" onclick="switchView('stock')"><div class="item-left"><div class="item-icon green">✓</div><div><div class="item-label">${label}</div><div class="item-meta">Finished goods</div></div></div><div class="count">${(_stockBalances.FG[k]||0).toLocaleString()} kg</div></div>`;
+    }).join("");
+  }
+  if (!stockHTML) stockHTML = '<div class="empty">No stock data yet</div>';
+  stockBody.innerHTML = stockHTML;
+
+  // QC column
+  const qcBody = document.getElementById("qcBody");
+  const chemKeys = Object.keys(CHEM_LABELS);
+  let qcHTML = "";
+  chemKeys.forEach(k => {
+    const qty = _stockBalances.CHEM[k] || 0;
+    const pt = REORDER_POINTS.CHEM[k];
+    const status = qty <= pt ? (qty <= pt*0.5 ? { cls:"badge-red", txt:"CRITICAL", icon:"🔴" } : { cls:"badge-amber", txt:"LOW", icon:"🟠" }) : { cls:"badge-green", txt:"OK", icon:"🟢" };
+    qcHTML += `<div class="list-item" onclick="adjustChemStock('${k}')"><div class="item-left"><div class="item-icon ${qty <= pt ? (qty <= pt*0.5 ? 'red' : 'amber') : 'green'}">${status.icon}</div><div><div class="item-label">${CHEM_LABELS[k]}</div><div class="item-meta">${qty.toLocaleString()} L available</div></div></div><span class="badge ${status.cls}">${status.txt}</span></div>`;
+  });
+  // Add a QC summary
+  const totalQc = chemKeys.reduce((s,k) => s + (_stockBalances.CHEM[k]||0), 0);
+  qcHTML += `<div class="list-item" style="border-top:2px solid var(--border-light); margin-top:4px;"><div class="item-left"><div class="item-icon gray">∑</div><div><div class="item-label" style="font-weight:700">Total Chemicals</div></div></div><div class="count">${totalQc.toLocaleString()} L</div></div>`;
+  qcBody.innerHTML = qcHTML;
+
+  // Processing column
+  const procBody = document.getElementById("processingBody");
+  let procHTML = "";
+  if (_shifts.length) {
+    const last = _shifts[0];
+    const loss = last.seedUsed > 0 ? (((last.seedUsed - last.totalPacked) / last.seedUsed) * 100).toFixed(1) : "0.0";
+    const yield_ = last.seedUsed > 0 ? ((last.totalPacked / last.seedUsed) * 100).toFixed(1) : "0.0";
+    procHTML = `
+      <div class="list-item"><div class="item-left"><div class="item-icon green">🌽</div><div><div class="item-label">Last Shift</div><div class="item-meta">${last.date || "—"} · Shift ${last.shift}</div></div></div><span class="badge badge-green">Done</span></div>
+      <div class="list-item"><div class="item-left"><div class="item-icon blue">⚖</div><div><div class="item-label">Seed Used</div></div></div><div class="count">${(last.seedUsed||0).toLocaleString()} kg</div></div>
+      <div class="list-item"><div class="item-left"><div class="item-icon green">📦</div><div><div class="item-label">Packed Output</div></div></div><div class="count">${(last.totalPacked||0).toLocaleString()} kg</div></div>
+      <div class="list-item"><div class="item-left"><div class="item-icon amber">📉</div><div><div class="item-label">Loss Rate</div></div></div><div class="count" style="color:var(--amber)">${loss}%</div></div>
+      <div class="list-item"><div class="item-left"><div class="item-icon green">📈</div><div><div class="item-label">Yield</div></div></div><div class="count" style="color:var(--green)">${yield_}%</div></div>
+    `;
+  } else {
+    procHTML = '<div class="empty">No shifts logged yet</div>';
+  }
+  procBody.innerHTML = procHTML;
+
+  // Activity
+  await refreshActivity();
+  // Commodities
+  renderCommodities();
+}
+
+async function refreshActivity() {
+  const body = document.getElementById("activityBody");
+  let entries = [];
+  try {
+    const ledgerData = await fbGet("/stock_ledger");
+    if (ledgerData) {
+      Object.values(ledgerData).sort((a,b) => b.timestamp - a.timestamp).slice(0,5).forEach(e => {
+        const time = new Date(e.timestamp).toLocaleString("en-KE", {timeZone:"Africa/Nairobi", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"});
+        const icon = e.direction === "IN" ? "📥" : "📤";
+        const label = (e.itemKey||"").replace(/_/g," ");
+        entries.push({ts:e.timestamp, html:`<div class="activity-item"><div class="activity-dot ${e.direction==='IN'?'green':'blue'}"></div><div class="activity-body"><div class="activity-title">${icon} ${e.direction} ${label} — ${e.qty.toLocaleString()} kg</div><div class="activity-meta">${e.refLabel || e.refType} · ${time}</div></div></div>`});
+      });
+    }
+  } catch(e) {}
+  try {
+    const shiftData = await fbGet("/maize_shifts");
+    if (shiftData) {
+      Object.values(shiftData).sort((a,b) => b.submittedAt - a.submittedAt).slice(0,3).forEach(s => {
+        const time = new Date(s.submittedAt).toLocaleString("en-KE", {timeZone:"Africa/Nairobi", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"});
+        entries.push({ts:s.submittedAt, html:`<div class="activity-item"><div class="activity-dot green"></div><div class="activity-body"><div class="activity-title">🌽 Shift ${s.shift} logged — ${(s.seedUsed||0).toLocaleString()} kg → ${(s.totalPacked||0).toLocaleString()} kg packed</div><div class="activity-meta">${s.supervisor} · ${time}</div></div></div>`});
+      });
+    }
+  } catch(e) {}
+  entries.sort((a,b) => b.ts - a.ts);
+  const top = entries.slice(0,8);
+  if (!top.length) body.innerHTML = '<div class="empty">No activity yet — log a shift or record stock to see it here.</div>';
+  else body.innerHTML = top.map(e => e.html).join("");
+}
+
+function renderCommodities() {
+  const tbody = document.getElementById("commodityTable");
+  const crops = [
+    {name:"Barley", moisture:"13.5% max", impurities:"0.5% max", oeg:"2.0% max", noxious:"0.0% max", test:"62.0 kg/hl min", aflatoxin:"10 ppb max"},
+    {name:"Wheat", moisture:"12.5% max", impurities:"0.5% max", oeg:"2.0% max", noxious:"0.0% max", test:"76.0 kg/hl min", aflatoxin:"10 ppb max"},
+    {name:"Canola", moisture:"9.0% max", impurities:"3.0% max", oeg:"2.0% max", noxious:"0.0% max", test:"—", aflatoxin:"10 ppb max"},
+    {name:"Maize", moisture:"13.0% max", impurities:"0.5% max", oeg:"2.0% max", noxious:"0.0% max", test:"72.0 kg/hl min", aflatoxin:"10 ppb max"},
+    {name:"Sunflower", moisture:"9.0% max", impurities:"2.0% max", oeg:"2.0% max", noxious:"0.0% max", test:"—", aflatoxin:"10 ppb max"},
+    {name:"Chickpeas", moisture:"14.0% max", impurities:"1.0% max", oeg:"2.0% max", noxious:"0.0% max", test:"—", aflatoxin:"10 ppb max"},
+  ];
+  tbody.innerHTML = crops.map(c => `<tr><td><strong>${c.name}</strong></td><td class="mono">${c.moisture}</td><td class="mono">${c.impurities}</td><td class="mono">${c.oeg}</td><td class="mono" style="color:var(--red)">${c.noxious}</td><td class="mono">${c.test}</td><td class="mono">${c.aflatoxin}</td></tr>`).join("");
+}
+
+/* ── MAIZE ── */
+async function loadMaizeData() {
+  try {
+    const data = await fbGet("/maize_shifts");
+    if (data) {
+      _shifts = Object.entries(data).map(([id, val]) => ({ id, ...val }));
+    } else {
+      _shifts = [];
+    }
+  } catch(e) {
+    const cached = JSON.parse(localStorage.getItem("maize_shifts") || "[]");
+    _shifts = cached.map((s, i) => ({ ...s, id: s.id || `local_${Date.now()}_${i}` }));
+  }
+  _shifts.sort((a,b) => (b.submittedAt||0) - (a.submittedAt||0));
+  renderMaize();
+}
+
+function renderMaize() {
+  const processed = _shifts.reduce((s,x) => s + (parseFloat(x.treaterOut)||0), 0) / 1000;
+  const remaining = Math.max(0, 5000 - processed);
+  const pct = Math.min(100, (processed / 5000) * 100);
+  document.getElementById("m-processed").textContent = processed.toFixed(1);
+  document.getElementById("m-remaining").textContent = remaining.toFixed(1);
+  document.getElementById("m-completion").textContent = pct.toFixed(0) + "%";
+  document.getElementById("m-bar").style.width = pct + "%";
+
+  // Chemical calc
+  const lastSeed = _shifts.length ? (_shifts[0].seedUsed || 0) : 0;
+  updateChemCalc(lastSeed);
+
+  // Shift table
+  const tbody = document.getElementById("shiftTable");
+  if (!_shifts.length) { tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:16px; color:var(--text-tertiary);">No shifts logged</td></tr>'; return; }
+  tbody.innerHTML = _shifts.map(s => {
+    const loss = s.seedUsed > 0 ? (((s.seedUsed - s.totalPacked) / s.seedUsed) * 100).toFixed(1) : "0.0";
+    const yield_ = s.seedUsed > 0 ? ((s.totalPacked / s.seedUsed) * 100).toFixed(1) : "0.0";
+    return `<tr><td class="mono">${s.date||"—"}</td><td><span class="badge badge-blue">${s.shift||"—"}</span></td><td>${s.supervisor||"—"}</td><td class="mono">${s.hrs||"—"}</td><td class="mono">${(s.seedUsed||0).toLocaleString()}</td><td class="mono">${(s.treaterOut||0).toLocaleString()}</td><td class="mono" style="color:var(--amber)">${loss}%</td><td class="mono" style="color:var(--green)">${yield_}%</td><td class="mono">${(s.bags2||0).toLocaleString()}</td><td class="mono">${(s.bags20||0).toLocaleString()}</td><td class="mono">${(s.bags50||0).toLocaleString()}</td><td class="no-print" style="white-space:nowrap;"><button class="btn btn-ghost btn-sm" onclick="editShift('${s.id}')">Edit</button> <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteShift('${s.id}')">Delete</button></td></tr>`;
+  }).join("");
+
+  renderChemInventory();
+}
+
+const CHEM_RATES = { gaucho: 1.75, maxim: 1.00, peridium: 2.00, water: 5.25 };
+function updateChemCalc(seedKg) {
+  const t = seedKg / 1000;
+  document.getElementById("calcGaucho").textContent = (t * CHEM_RATES.gaucho).toFixed(2) + " L";
+  document.getElementById("calcMaxim").textContent = (t * CHEM_RATES.maxim).toFixed(2) + " L";
+  document.getElementById("calcPeridium").textContent = (t * CHEM_RATES.peridium).toFixed(2) + " L";
+  document.getElementById("calcWater").textContent = (t * CHEM_RATES.water).toFixed(2) + " L";
+  document.getElementById("calcTotalSlurry").textContent = (t * 10.0).toFixed(2) + " L";
+}
+function autoPopulateChemFields() {
+  const seedUsed = parseFloat(document.getElementById("msSeedUsed").value) || 0;
+  const t = seedUsed / 1000;
+  document.getElementById("msGaucho").value = (t * CHEM_RATES.gaucho).toFixed(2);
+  document.getElementById("msMaxim").value = (t * CHEM_RATES.maxim).toFixed(2);
+  document.getElementById("msPeridium").value = (t * CHEM_RATES.peridium).toFixed(2);
+  updateChemCalc(seedUsed);
+  checkChemAvailability();
+}
+
+function checkChemAvailability() {
+  const gaucho = parseFloat(document.getElementById("msGaucho").value) || 0;
+  const maxim = parseFloat(document.getElementById("msMaxim").value) || 0;
+  const peridium = parseFloat(document.getElementById("msPeridium").value) || 0;
+  const bal = (_stockBalances && _stockBalances.CHEM) || {};
+  const shortages = [];
+  if (gaucho > (bal.gaucho_flex || 0)) shortages.push(`Gaucho Flex short by ${(gaucho - (bal.gaucho_flex||0)).toFixed(2)} L`);
+  if (maxim > (bal.maxim || 0)) shortages.push(`Maxim short by ${(maxim - (bal.maxim||0)).toFixed(2)} L`);
+  if (peridium > (bal.peridium || 0)) shortages.push(`Peridium short by ${(peridium - (bal.peridium||0)).toFixed(2)} L`);
+  const warn = document.getElementById("msChemWarning");
+  if (shortages.length) {
+    warn.style.display = "block";
+    warn.innerHTML = `⚠ Insufficient chemical stock — ${shortages.join(", ")}`;
+  } else {
+    warn.style.display = "none";
+    warn.innerHTML = "";
+  }
+  return shortages.length === 0;
+}
+
+/* ── SHIFT MODAL ── */
+async function openShiftModal(shiftId) {
+  document.getElementById("shiftModal").classList.add("show");
+  document.getElementById("shiftErr").textContent = "";
+  if (shiftId) {
+    _editingShiftId = shiftId;
+    const shift = _shifts.find(s => s.id === shiftId);
+    document.getElementById("shiftModalTitle").textContent = "Edit Production Shift";
+    document.getElementById("shiftSaveBtn").textContent = "Update Shift";
+    document.getElementById("msDate").value = shift.date || todayStrISO();
+    document.getElementById("msShift").value = shift.shift || "A";
+    document.getElementById("msSupervisor").value = shift.supervisor || "";
+    document.getElementById("msStart").value = shift.startTime || "06:00";
+    document.getElementById("msStop").value = shift.stopTime || "18:00";
+    document.getElementById("msSeedUsed").value = shift.seedUsed || "";
+    document.getElementById("msTreaterOut").value = shift.treaterOut || "";
+    document.getElementById("msScreenings").value = shift.screenings || "";
+    document.getElementById("msGaucho").value = shift.gaucho || "";
+    document.getElementById("msMaxim").value = shift.maxim || "";
+    document.getElementById("msPeridium").value = shift.peridium || "";
+    document.getElementById("msBags2").value = shift.bags2 || "";
+    document.getElementById("msBags20").value = shift.bags20 || "";
+    document.getElementById("msBags50").value = shift.bags50 || "";
+    document.getElementById("msNotes").value = shift.notes || "";
+  } else {
+    _editingShiftId = null;
+    document.getElementById("shiftModalTitle").textContent = "Log Production Shift";
+    document.getElementById("shiftSaveBtn").textContent = "Save & Update Stock";
+    document.getElementById("msDate").value = todayStrISO();
+    document.getElementById("msShift").value = "A";
+    document.getElementById("msSupervisor").value = "";
+    document.getElementById("msStart").value = "06:00";
+    document.getElementById("msStop").value = "18:00";
+    document.getElementById("msSeedUsed").value = "";
+    document.getElementById("msTreaterOut").value = "";
+    document.getElementById("msScreenings").value = "";
+    document.getElementById("msGaucho").value = "";
+    document.getElementById("msMaxim").value = "";
+    document.getElementById("msPeridium").value = "";
+    document.getElementById("msBags2").value = "";
+    document.getElementById("msBags20").value = "";
+    document.getElementById("msBags50").value = "";
+    document.getElementById("msNotes").value = "";
+  }
+  await getStockBalances();
+  const avail = (_stockBalances.RAW.maize_white || 0) + (_stockBalances.RAW.maize_yellow || 0);
+  document.getElementById("msAvailStock").textContent = avail.toLocaleString() + " kg";
+  checkSeedAvailability();
+  checkChemAvailability();
+}
+function closeShiftModal() {
+  document.getElementById("shiftModal").classList.remove("show");
+  _editingShiftId = null;
+}
+function checkSeedAvailability() {
+  const seedUsed = parseFloat(document.getElementById("msSeedUsed").value) || 0;
+  const avail = (_stockBalances.RAW.maize_white || 0) + (_stockBalances.RAW.maize_yellow || 0);
+  const el = document.getElementById("msAvailStock");
+  if (seedUsed > avail) { el.style.color = "var(--red)"; el.textContent = `${avail.toLocaleString()} kg (short by ${(seedUsed-avail).toLocaleString()})`; }
+  else { el.style.color = "var(--green)"; el.textContent = avail.toLocaleString() + " kg"; }
+}
+
+async function saveShift() {
+  const date = document.getElementById("msDate").value;
+  const shift = document.getElementById("msShift").value;
+  const supervisor = document.getElementById("msSupervisor").value.trim();
+  const seedUsed = parseFloat(document.getElementById("msSeedUsed").value) || 0;
+  const treaterOut = parseFloat(document.getElementById("msTreaterOut").value) || 0;
+  const screenings = parseFloat(document.getElementById("msScreenings").value) || 0;
+  const gaucho = parseFloat(document.getElementById("msGaucho").value) || 0;
+  const maxim = parseFloat(document.getElementById("msMaxim").value) || 0;
+  const peridium = parseFloat(document.getElementById("msPeridium").value) || 0;
+  const bags2 = parseFloat(document.getElementById("msBags2").value) || 0;
+  const bags20 = parseFloat(document.getElementById("msBags20").value) || 0;
+  const bags50 = parseFloat(document.getElementById("msBags50").value) || 0;
+  const totalPacked = bags2 * 2 + bags20 * 20 + bags50 * 50;
+
+  if (!date || !supervisor) { document.getElementById("shiftErr").textContent = "Date and supervisor required"; return; }
+  if (!checkChemAvailability()) {
+    if (!confirm("Chemical stock is insufficient for the entered quantities. Save this shift anyway?")) return;
+  }
+
+  const start = document.getElementById("msStart").value.split(":");
+  const stop = document.getElementById("msStop").value.split(":");
+  let hrs = (parseInt(stop[0]) + parseInt(stop[1])/60) - (parseInt(start[0]) + parseInt(start[1])/60);
+  if (hrs < 0) hrs += 24;
+
+  const newData = { date, shift, supervisor, startTime: document.getElementById("msStart").value, stopTime: document.getElementById("msStop").value, hrs: hrs.toFixed(1), seedUsed, treaterOut, screenings, gaucho, maxim, peridium, bags2, bags20, bags50, totalPacked, notes: document.getElementById("msNotes").value, inspector: _userEmail };
+
+  if (_editingShiftId) {
+    const existing = _shifts.find(s => s.id === _editingShiftId);
+    const data = { ...existing, ...newData, updatedAt: Date.now() };
+    try {
+      await fbUpdate(`/maize_shifts/${_editingShiftId}`, data);
+    } catch(e) {}
+    const idx = _shifts.findIndex(s => s.id === _editingShiftId);
+    if (idx >= 0) _shifts[idx] = { id: _editingShiftId, ...data };
+    localStorage.setItem("maize_shifts", JSON.stringify(_shifts));
+    _editingShiftId = null;
+    closeShiftModal();
+    renderMaize();
+    loadDashboard();
+    toast("Shift updated", "green");
+    return;
+  }
+
+  if (!checkChemAvailability()) {
+    if (!confirm("Chemical stock is insufficient for the entered quantities. Save this shift anyway?")) return;
+  }
+
+  const data = { ...newData, submittedAt: Date.now() };
+
+  try {
+    const result = await fbPush("/maize_shifts", data);
+    const newId = result?.name || `local_${Date.now()}`;
+    _shifts.unshift({ id: newId, ...data });
+    localStorage.setItem("maize_shifts", JSON.stringify(_shifts));
+    if (seedUsed > 0) {
+      await getStockBalances();
+      const whiteAvail = _stockBalances.RAW.maize_white || 0;
+      const fromWhite = Math.min(seedUsed, whiteAvail);
+      const fromYellow = seedUsed - fromWhite;
+      if (fromWhite > 0) await recordStockMovement("RAW", "maize_white", fromWhite, "OUT", "SHIFT", `${date} Shift ${shift}`);
+      if (fromYellow > 0) await recordStockMovement("RAW", "maize_yellow", fromYellow, "OUT", "SHIFT", `${date} Shift ${shift}`);
+    }
+    if (gaucho > 0) await recordStockMovement("CHEM", "gaucho_flex", gaucho, "OUT", "SHIFT", `${date} Shift ${shift}`);
+    if (maxim > 0) await recordStockMovement("CHEM", "maxim", maxim, "OUT", "SHIFT", `${date} Shift ${shift}`);
+    if (peridium > 0) await recordStockMovement("CHEM", "peridium", peridium, "OUT", "SHIFT", `${date} Shift ${shift}`);
+    if (totalPacked > 0) await recordStockMovement("FG", "maize_seed", totalPacked, "IN", "SHIFT", `${date} Shift ${shift}`);
+    closeShiftModal();
+    renderMaize();
+    loadStockLedger();
+    loadDashboard();
+    toast("Shift saved — stock updated", "green");
+  } catch(e) {
+    const localId = `local_${Date.now()}`;
+    _shifts.unshift({ id: localId, ...data });
+    localStorage.setItem("maize_shifts", JSON.stringify(_shifts));
+    closeShiftModal();
+    renderMaize();
+    toast("Saved offline — will sync on reconnect", "amber");
+  }
+}
+
+/* ── EDIT / DELETE SHIFTS ── */
+function editShift(id) {
+  const shift = _shifts.find(s => s.id === id);
+  if (!shift) return;
+  openShiftModal(id);
+}
+async function deleteShift(id) {
+  if (!confirm("Delete this shift permanently? This cannot be undone.")) return;
+  try {
+    await fbUpdate(`/maize_shifts/${id}`, null);
+  } catch(e) {}
+  _shifts = _shifts.filter(s => s.id !== id);
+  localStorage.setItem("maize_shifts", JSON.stringify(_shifts));
+  renderMaize();
+  loadDashboard();
+  toast("Shift deleted", "green");
+}
+
+/* ── EXPORT ── */
+function exportDailyReport() {
+  const date = todayStrISO();
+  const raw = document.getElementById("kpi-raw").textContent;
+  const wip = document.getElementById("kpi-wip").textContent;
+  const fg = document.getElementById("kpi-fg").textContent;
+  const contract = document.getElementById("kpi-contract").textContent;
+  const report = `AGV DAILY OPERATIONS REPORT — ${date}\n\nSTOCK POSITION\n  Raw Stock:    ${raw} kg\n  WIP:          ${wip} kg\n  Finished:     ${fg} kg\n\nMAIZE CONTRACT\n  ${contract}\n\nGenerated: ${nowTime()} by ${_userEmail || "system"}\n`;
+  const blob = new Blob([report], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `AGV_Daily_${date}.txt`; a.click();
+  URL.revokeObjectURL(url);
+  toast("Daily report exported", "green");
+}
+
+/* ── EXCEL TEMPLATE EXPORT (matches Daily Shift Tracker / Contract Dashboard workbook) ── */
+function excelDateSerial(dateStr) {
+  // dateStr = "YYYY-MM-DD" -> Excel serial date (1900 date system)
+  const d = new Date(dateStr + "T00:00:00Z");
+  const epoch = new Date(Date.UTC(1899, 11, 30));
+  return Math.round((d - epoch) / 86400000);
+}
+function excelTimeFraction(hhmm) {
+  if (!hhmm) return 0;
+  const [h, m] = hhmm.split(":").map(Number);
+  return (h + (m || 0) / 60) / 24;
+}
+function setFormula(ws, addr, formula) {
+  ws[addr] = { t: "n", f: formula, v: 0 };
+}
+
+function exportToExcelTemplate() {
+  if (typeof XLSX === "undefined") { toast("Excel library not loaded — check your connection", "amber"); return; }
+  if (!_shifts.length) { toast("No shifts to export", "amber"); return; }
+
+  // Sort ascending by date/submittedAt so the tracker reads chronologically, like the source template
+  const ordered = [..._shifts].sort((a,b) => (a.submittedAt||0) - (b.submittedAt||0));
+
+  const headerGroups = ["SHIFT INFO","","","MACHINE RUN","","","SEED INTAKE ","","","","SEED TREATER","","","","CHEMICAL USAGE","","","","PACKAGING OUTPUT","","","","EFFICIENCY & LOSS","","","",""];
+  const headers = ["Date","Shift","Supervisor","Start Time","Stop Time","Hrs Run","Opening Stock (kg)","Seed Received (kg)","Seed Used (kg)","Closing Stock (kg)","Treater Start (kg)","Treater Output (kg)","Treatment Rate (t/hr)","Treater Efficiency %","Gaucho Flex (L)","Maxim (L)","Peridium (L)","Water (L)","2kg Bags","20kg Bags","50kg Bags","Total Packed (kg)","Process Loss (kg)","Screenings, Chaff & Dust (kg)","Loss %","Yield %","Throughput (kg/hr)"];
+
+  // Running opening/closing stock across shifts, seeded from live stock balances at export time
+  const rawBal = (_stockBalances && _stockBalances.RAW) || {};
+  const totalUsed = ordered.reduce((s,x) => s + (parseFloat(x.seedUsed)||0), 0);
+  let opening = ((rawBal.maize_white || 0) + (rawBal.maize_yellow || 0)) + totalUsed; // approximate opening balance before any of these shifts consumed stock
+
+  const startRow = 5; // first data row in the template (1-indexed, matches source workbook)
+  const aoa = [
+    ["DAILY SHIFT PRODUCTION TRACKER - MAIZE SEED PROCESSING"],
+    ["Contract Volume: 5,000 Tonnes | Target: Optimize throughput & minimize loss"],
+    headerGroups,
+    headers
+  ];
+
+  const rowMeta = []; // { closing } per row, used after sheet creation to place formulas
+  ordered.forEach((s) => {
+    const seedUsed = parseFloat(s.seedUsed) || 0;
+    const closing = opening - seedUsed;
+    const water = (seedUsed/1000) * CHEM_RATES.water;
+    aoa.push([
+      s.date ? excelDateSerial(s.date) : "",
+      s.shift || "",
+      s.supervisor || "",
+      s.startTime ? excelTimeFraction(s.startTime) : "",
+      s.stopTime ? excelTimeFraction(s.stopTime) : "",
+      0, // Hrs Run — formula set below
+      opening,
+      0,
+      seedUsed,
+      closing,
+      seedUsed,
+      parseFloat(s.treaterOut) || 0,
+      0, // Treatment Rate — formula
+      0, // Treater Efficiency — formula
+      parseFloat(s.gaucho) || 0,
+      parseFloat(s.maxim) || 0,
+      parseFloat(s.peridium) || 0,
+      Number(water.toFixed(2)),
+      parseFloat(s.bags2) || 0,
+      parseFloat(s.bags20) || 0,
+      parseFloat(s.bags50) || 0,
+      0, // Total Packed — formula
+      0, // Process Loss — formula
+      parseFloat(s.screenings) || 0,
+      0, // Loss % — formula
+      0, // Yield % — formula
+      0  // Throughput (kg/hr) — formula
+    ]);
+    opening = closing;
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  // Place formulas for computed columns on each data row
+  ordered.forEach((s, i) => {
+    const r = startRow + i;
+    setFormula(ws, `F${r}`, `IF(E${r}<D${r},E${r}-D${r}+1,E${r}-D${r})`);
+    setFormula(ws, `M${r}`, `K${r}/1000/F${r}`);
+    setFormula(ws, `N${r}`, `IF(K${r}=0,0,L${r}/K${r}*100)`);
+    setFormula(ws, `V${r}`, `S${r}*2+T${r}*20+U${r}*50`);
+    setFormula(ws, `W${r}`, `L${r}-V${r}`);
+    setFormula(ws, `Y${r}`, `IF(L${r}=0,0,W${r}/L${r}*100)`);
+    setFormula(ws, `Z${r}`, `100-Y${r}`);
+    setFormula(ws, `AA${r}`, `V${r}/F${r}`);
+  });
+
+  ws["!merges"] = [
+    { s:{r:0,c:0}, e:{r:0,c:26} },
+    { s:{r:1,c:0}, e:{r:1,c:26} },
+    { s:{r:2,c:0}, e:{r:2,c:2} },
+    { s:{r:2,c:3}, e:{r:2,c:5} },
+    { s:{r:2,c:6}, e:{r:2,c:9} },
+    { s:{r:2,c:10}, e:{r:2,c:13} },
+    { s:{r:2,c:14}, e:{r:2,c:17} },
+    { s:{r:2,c:18}, e:{r:2,c:21} },
+    { s:{r:2,c:22}, e:{r:2,c:26} }
+  ];
+  ws["!cols"] = [
+    {wch:12},{wch:8},{wch:14},{wch:10},{wch:10},{wch:9},{wch:14},{wch:16},{wch:14},{wch:16},
+    {wch:14},{wch:17},{wch:18},{wch:20},{wch:14},{wch:10},{wch:12},{wch:10},{wch:9},{wch:10},
+    {wch:10},{wch:16},{wch:14},{wch:26},{wch:10},{wch:10},{wch:16}
+  ];
+  for (let i = 0; i < ordered.length; i++) {
+    const r = startRow + i;
+    if (ws[`A${r}`]) ws[`A${r}`].z = "mm-dd-yy";
+    if (ws[`D${r}`]) ws[`D${r}`].z = "h:mm";
+    if (ws[`E${r}`]) ws[`E${r}`].z = "h:mm";
+    if (ws[`F${r}`]) ws[`F${r}`].z = "h:mm";
+  }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Daily Shift Tracker");
+
+  // Contract Dashboard sheet, mirroring the source workbook's KPI formulas
+  const lastRow = startRow + ordered.length - 1;
+  const dashAoa = [
+    ["5,000 TONNE MAIZE SEED CONTRACT - PROGRESS DASHBOARD"],
+    [],
+    ["KEY PERFORMANCE INDICATORS"],
+    ["CONTRACT VOLUME","PROCESSED TO DATE","REMAINING","COMPLETION %"],
+    [5000, 0, 0, 0],
+    ["tonnes","kg","kg","%"],
+    [],
+    ["OPERATIONAL EFFICIENCY"],
+    ["AVG THROUGHPUT","AVG LOSS %","AVG YIELD %","SHIFTS COMPLETED","AVG SCREENINGS (kg)"],
+    [0, 0, 0, 0, 0],
+    ["kg/hr","%","%","shifts","kg"],
+    [],
+    ["RECENT SHIFT SUMMARY (Last 10 Shifts)"],
+    ["Date","Shift","Supervisor","Output (kg)","Loss %","Yield %"]
+  ];
+  const recentCount = Math.min(10, ordered.length);
+  for (let i = 0; i < recentCount; i++) dashAoa.push([0,0,0,0,0,0]);
+
+  const dashWs = XLSX.utils.aoa_to_sheet(dashAoa);
+  dashWs["!cols"] = [{wch:16},{wch:16},{wch:14},{wch:12},{wch:10},{wch:10}];
+
+  setFormula(dashWs, "B5", `SUM('Daily Shift Tracker'!L${startRow}:L${lastRow})`);
+  setFormula(dashWs, "C5", "A5*1000-B5");
+  setFormula(dashWs, "D5", "B5/(A5*1000)*100");
+  setFormula(dashWs, "A10", `AVERAGE('Daily Shift Tracker'!AA${startRow}:AA${lastRow})`);
+  setFormula(dashWs, "B10", `AVERAGE('Daily Shift Tracker'!Y${startRow}:Y${lastRow})`);
+  setFormula(dashWs, "C10", `AVERAGE('Daily Shift Tracker'!Z${startRow}:Z${lastRow})`);
+  setFormula(dashWs, "D10", `COUNTA('Daily Shift Tracker'!A${startRow}:A${lastRow})`);
+  setFormula(dashWs, "E10", `AVERAGE('Daily Shift Tracker'!X${startRow}:X${lastRow})`);
+
+  for (let i = 0; i < recentCount; i++) {
+    const dashRow = 15 + i;
+    const srcRow = lastRow - i; // most recent shifts first
+    setFormula(dashWs, `A${dashRow}`, `'Daily Shift Tracker'!A${srcRow}`);
+    setFormula(dashWs, `B${dashRow}`, `'Daily Shift Tracker'!B${srcRow}`);
+    setFormula(dashWs, `C${dashRow}`, `'Daily Shift Tracker'!C${srcRow}`);
+    setFormula(dashWs, `D${dashRow}`, `'Daily Shift Tracker'!L${srcRow}`);
+    setFormula(dashWs, `E${dashRow}`, `'Daily Shift Tracker'!Y${srcRow}`);
+    setFormula(dashWs, `F${dashRow}`, `'Daily Shift Tracker'!Z${srcRow}`);
+  }
+
+  XLSX.utils.book_append_sheet(wb, dashWs, "Contract Dashboard");
+  XLSX.writeFile(wb, `AGV_Maize_Seed_Processing_Production_System_${todayStrISO()}.xlsx`);
+  toast(`Exported ${ordered.length} shifts to Excel tracker`, "green");
+}
+
+function exportShiftsCSV() {
+  if (!_shifts.length) { toast("No shifts to export", "amber"); return; }
+  const headers = ["Date","Shift","Supervisor","Hours","Seed Used (kg)","Treater Out (kg)","Screenings (kg)","Loss %","Yield %","Gaucho Flex (L)","Maxim (L)","Peridium (L)","2kg Bags","20kg Bags","50kg Bags","Total Packed (kg)","Inspector","Notes","Submitted At"];
+  const rows = _shifts.map(s => {
+    const loss = s.seedUsed > 0 ? (((s.seedUsed - s.totalPacked) / s.seedUsed) * 100).toFixed(1) : "0.0";
+    const yield_ = s.seedUsed > 0 ? ((s.totalPacked / s.seedUsed) * 100).toFixed(1) : "0.0";
+    const submitted = s.submittedAt ? new Date(s.submittedAt).toLocaleString("en-KE",{timeZone:"Africa/Nairobi"}) : "";
+    return [s.date, s.shift, s.supervisor, s.hrs, s.seedUsed, s.treaterOut, s.screenings, loss, yield_, s.gaucho, s.maxim, s.peridium, s.bags2, s.bags20, s.bags50, s.totalPacked, s.inspector, s.notes, submitted];
+  });
+  const escapeCsv = v => {
+    const str = (v === undefined || v === null) ? "" : String(v);
+    return /[",\n]/.test(str) ? `"${str.replace(/"/g,'""')}"` : str;
+  };
+  const csv = [headers, ...rows].map(r => r.map(escapeCsv).join(",")).join("\r\n");
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `AGV_Maize_Shifts_${todayStrISO()}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  toast(`Exported ${_shifts.length} shift records`, "green");
+}
+
+/* ── SEARCH ── */
+function handleSearch(q) {
+  if (!q) return;
+  q = q.toLowerCase();
+  // Simple: if matches commodity, show that view
+  if (q.includes("maize")) switchView("maize");
+  else if (q.includes("stock") || q.includes("ledger")) switchView("stock");
+  else if (q.includes("shift")) openShiftModal();
+}
+
+/* ── REFRESH ── */
+function refreshAll() {
+  loadDashboard();
+  loadStockLedger();
+  loadMaizeData();
+  toast("All views refreshed", "green");
+}
+
+/* ── KEYBOARD SHORTCUTS ── */
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    const modal = document.getElementById("shiftModal");
+    if (modal.classList.contains("show")) closeShiftModal();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+    e.preventDefault();
+    openShiftModal();
+  }
+});
+
+/* ── STARTUP ── */
+window.addEventListener("DOMContentLoaded", () => {
+  loadStoredConfig();
+  loadTheme();
+  if (_token && Date.now() < _tokenExpiry - 300000) {
+    document.getElementById("loginWrap").style.display = "none";
+    initApp();
+  } else {
+    document.getElementById("loginWrap").style.display = "flex";
+    document.getElementById("loginEmail").focus();
+  }
+});
+</script>
+</body>
+</html>
